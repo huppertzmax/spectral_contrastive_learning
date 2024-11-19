@@ -1,0 +1,9 @@
+log
+wandb
+datasets/data
+augmentations/__pycache__
+datasets/__pycache__/
+optimizers/__pycache__/
+models/backbones/__pycache__/
+models/__pycache__
+__pycache__

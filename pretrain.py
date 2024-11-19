@@ -11,6 +11,8 @@ from models import get_model
 from datasets import get_dataset
 from optimizers import get_optimizer, LR_Scheduler
 from datetime import datetime
+import wandb
+from tqdm import tqdm
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -64,8 +66,12 @@ def main(log_writer, log_file, device, args):
     for epoch in range(0, args.train.stop_at_epoch):
         model.train()
         loss_list = []
-        print("number of iters this epoch: {}".format(len(train_loader)))
-        for idx, ((images1, images2), labels) in enumerate(train_loader):
+
+        #print(f"Epoch {epoch+1}/{args.train.stop_at_epoch}")
+        #print("number of iters this epoch: {}".format(len(train_loader)))
+        
+        train_progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{args.train.stop_at_epoch} - Training", leave=False)
+        for idx, ((images1, images2), labels) in enumerate(train_progress_bar):
             iter_count += 1
             model.zero_grad()
             data_dict = model.forward(images1.to(device, non_blocking=True), images2.to(device, non_blocking=True))
@@ -75,14 +81,25 @@ def main(log_writer, log_file, device, args):
             lr_scheduler.step()
             data_dict.update({'lr':lr_scheduler.get_lr()})
             loss_list.append(loss.item())
+            wandb.log({"train_loss": loss.item()})
+            wandb.log({"train_loss_part1": data_dict['d_dict']['part1']})
+            wandb.log({"train_loss_part2": data_dict['d_dict']['part2']})
+
+            train_progress_bar.set_postfix(loss=loss.item())
 
         model.eval()
 
         test_loss_list = []
-        for idx, ((images1, images2), labels) in enumerate(test_loader):
+        test_progress_bar = tqdm(test_loader, desc="Testing", leave=False)
+        for idx, ((images1, images2), labels) in enumerate(test_progress_bar):
             data_dict = model.forward(images1.to(device, non_blocking=True), images2.to(device, non_blocking=True))
             test_loss = data_dict['loss'].mean()
             test_loss_list.append(test_loss.item())
+            wandb.log({"test_loss": test_loss.item()})
+            wandb.log({"test_loss_part1": data_dict['d_dict']['part1']})
+            wandb.log({"test_loss_part2": data_dict['d_dict']['part2']})
+            
+            test_progress_bar.set_postfix(test_loss=test_loss.item())
 
         write_dict = {
             'epoch': epoch,
@@ -90,6 +107,12 @@ def main(log_writer, log_file, device, args):
             'lr': lr_scheduler.get_lr(),
             'test_loss': sum(test_loss_list) / len(test_loss_list),
         }
+
+        wandb.log({"epoch": epoch})
+        wandb.log({"lr": lr_scheduler.get_lr()})
+        wandb.log({"epoch_loss": sum(loss_list) / len(loss_list)})
+        wandb.log({"epoch_test_loss": sum(test_loss_list) / len(test_loss_list)})
+
         log_writer.writerow(write_dict)
         log_file.flush()
 
@@ -115,6 +138,12 @@ def main(log_writer, log_file, device, args):
 if __name__ == "__main__":
     args, log_file, log_writer = get_args()
 
+    print('########################################')
+    print(args)
+    print('########################################')
+
+    wandb.init(project='spectral-contrastive-learning', config=args)
+
     main(log_writer, log_file, device=args.device, args=args)
 
     completed_log_dir = args.log_dir.replace('in-progress', 'debug' if args.debug else 'completed')
@@ -122,3 +151,5 @@ if __name__ == "__main__":
 
     os.rename(args.log_dir, completed_log_dir)
     print(f'Log file has been saved to {completed_log_dir}')
+
+    wandb.finish()

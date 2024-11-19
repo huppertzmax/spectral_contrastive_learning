@@ -7,9 +7,9 @@ from PIL import Image
 import os
 
 
-def get_dataset(dataset, data_dir, transform, train=True, download=False):
+def get_dataset(dataset, data_dir, transform, train=True, download=True):
     if dataset == 'cifar10':
-        dataset = torchvision.datasets.CIFAR10('PATH_TO_DATASET', train=train, transform=transform, download=download)
+        dataset = torchvision.datasets.CIFAR10(root=data_dir, train=train, transform=transform, download=download)
     elif dataset == 'cifar100':
         dataset = torchvision.datasets.CIFAR100('PATH_TO_DATASET', train=train, transform=transform, download=download)
     elif dataset == 'imagenet':

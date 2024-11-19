@@ -46,17 +46,17 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config-file', required=True, type=str, help="xxx.yaml")
     parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--log_freq', type=int, default=20)
-    parser.add_argument('--workers', type=int, default=32)
+    parser.add_argument('--log_freq', type=int, default=100)
+    parser.add_argument('--workers', type=int, default=6)
     parser.add_argument('--test_bs', type=int, default=80)
-    parser.add_argument('--download', action='store_true', help="if can't find dataset, download from web")
-    parser.add_argument('--data_dir', type=str, default='PATH_TO_DATASET')
+    parser.add_argument('--download', action='store_true', help="if can't find dataset, download from web", default=True)
+    parser.add_argument('--data_dir', type=str, default='./datasets/data')
     parser.add_argument('--dist_url', type=str, default='tcp://localhost:10001')
     parser.add_argument('--log_dir', type=str, default='./log/spectral')
-    parser.add_argument('--ckpt_dir', type=str, default='~/.cache/')
+    parser.add_argument('--ckpt_dir', type=str, default='./checkpoints')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--eval_from', type=str, default=None)
-    parser.add_argument('--hide_progress', action='store_true')
+    parser.add_argument('--hide_progress', action='store_true') # TODO maybe remove this
     args = parser.parse_args()
 
     with open(args.config_file, 'r') as f:
@@ -65,11 +65,11 @@ def get_args():
 
     if args.debug:
         if args.train: 
-            args.train.batch_size = 2
+            args.train.batch_size = 512
             args.train.num_epochs = 1
             args.train.stop_at_epoch = 1
         if args.eval: 
-            args.eval.batch_size = 2
+            args.eval.batch_size = 512
             args.eval.num_epochs = 1 # train only one epoch
         args.dataset.num_workers = 0
 
