@@ -46,7 +46,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config-file', required=True, type=str, help="xxx.yaml")
     parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--log_freq', type=int, default=100)
+    parser.add_argument('--log_freq', type=int, default=50)
     parser.add_argument('--workers', type=int, default=6)
     parser.add_argument('--test_bs', type=int, default=80)
     parser.add_argument('--download', action='store_true', help="if can't find dataset, download from web", default=True)
