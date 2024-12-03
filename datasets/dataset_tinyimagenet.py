@@ -21,7 +21,7 @@ def get_dataset_path():
 data_path_dict = {
     'imagenet': get_dataset_path(),
     'tiny-imagenet': 'PATH_TO_DATASET',
-    'cifar10': 'PATH_TO_DATASET',
+    'cifar10': './datasets/data',
     'cifar100': 'PATH_TO_DATASET'
 }
 
@@ -131,7 +131,7 @@ def load_train(dataset, num_per_class, distributed, batch_size, workers,
 
     if dataset == 'cifar10':
         train_transform = obtain_aug(dataset, data_aug, aug_plus)
-        train_dataset = torchvision.datasets.CIFAR10(data_path_dict['cifar10'], train=True, transform=train_transform, download=False)
+        train_dataset = torchvision.datasets.CIFAR10(data_path_dict['cifar10'], train=True, transform=train_transform, download=True)
     elif dataset == 'cifar100':
         train_transform = obtain_aug(dataset, data_aug, aug_plus)
         train_dataset = torchvision.datasets.CIFAR100(data_path_dict['cifar100'], train=True, transform=train_transform, download=False)

@@ -4,6 +4,7 @@ import builtins
 import os
 import shutil
 import copy
+import wandb
 
 import torch
 import torch.nn as nn
@@ -31,7 +32,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                     help='model architecture: ' +
                         ' | '.join(model_names) +
                         ' (default: resnet50)')
-parser.add_argument('-j', '--workers', default=32, type=int, metavar='N',
+parser.add_argument('-j', '--workers', default=6, type=int, metavar='N',
                     help='number of data loading workers (default: 32)')
 parser.add_argument('--epochs', default=100, type=int, metavar='N',
                     help='number of total epochs to run')
@@ -81,7 +82,7 @@ parser.add_argument('--num_per_class', type=int, default=int(1e10),
                     help='Number of images per class for getting a subset of Imagenet')
 parser.add_argument('--val_every', type=int, default=5, help='How often to evaluate lincls')
 parser.add_argument('--latest_only', action='store_true', help='if set, only evaluate the latest_ checkpoints')
-parser.add_argument('--mpd', action='store_true', help='short hand for multi-gpu training')
+parser.add_argument('--mpd', action='store_true', help='short hand for multi-gpu training', default=False)
 parser.add_argument('--dist_url_add', default=0, type=int, help='to avoid collisions of tcp')
 parser.add_argument('--specific_ckpts', nargs='*', help='filenames of specific checkpoints to evaluate')
 parser.add_argument('--use_random_labels', action='store_true', help='whether to evaluate using the random labels')
@@ -95,7 +96,14 @@ best_acc1 = 0
 
 def main():
     args = parser.parse_args()
+    wandb.init(project='spectral-contrastive-learning', config=args)
+    print('########################################')
+    print(args)
+    print('########################################')
     if args.mpd:
+        print('########################################')
+        print('Running in parallel with ')
+        print('########################################')
         args.multiprocessing_distributed = True
         args.world_size = 1
         args.rank = 0
@@ -209,14 +217,23 @@ def eval_ckpt(args, ngpus_per_node, ptrain_fname, logger):
         if args.distributed:
             train_sampler.set_epoch(epoch)
         adjust_learning_rate(optimizer, epoch, args)
+        wandb.log({'lr': args.lr})
 
         # train for one epoch
         top1, top5, losses = train(train_loader, model, criterion, optimizer, epoch, args)
+
+        wandb.log({"epoch_train_loss": losses})
+        wandb.log({"epoch_train_acc1": top1})
+        wandb.log({"epoch_train_acc5": top5})
 
         # always test after 1 epoch of linear evaluation
         if epoch == 0 or (epoch + 1) % args.val_every == 0:
             # evaluate on validation set
             acc1, acc5, val_losses = validate(val_loader, model, criterion, args)
+            
+            wandb.log({"epoch_val_loss": val_losses})
+            wandb.log({"epoch_val_acc1": acc1})
+            wandb.log({"epoch_val_acc5": acc5})
 
             # remember best acc@1 and save checkpoint
             is_best = acc1 > best_acc1
@@ -281,6 +298,10 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         top1.update(acc1[0], images.size(0))
         top5.update(acc5[0], images.size(0))
 
+        wandb.log({"train_loss": loss.item()})
+        wandb.log({"train_acc1": acc1[0]})
+        wandb.log({"train_acc5": acc5[0]})
+
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -320,6 +341,10 @@ def validate(val_loader, model, criterion, args):
             top1.update(acc1[0], images.size(0))
             top5.update(acc5[0], images.size(0))
 
+            wandb.log({"val_loss": loss.item()})
+            wandb.log({"val_acc1": acc1[0]})
+            wandb.log({"val_acc5": acc5[0]})
+
             if i % args.print_freq == 0:
                 progress.display(i)
 
@@ -348,3 +373,5 @@ def adjust_learning_rate(optimizer, epoch, args):
 
 if __name__ == '__main__':
     main()
+
+wandb.finish()
