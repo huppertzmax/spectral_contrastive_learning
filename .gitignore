@@ -7,3 +7,4 @@ optimizers/__pycache__/
 models/backbones/__pycache__/
 models/__pycache__
 __pycache__
+data
